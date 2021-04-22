@@ -4,7 +4,12 @@ defmodule CambiatusWeb.Resolvers.Accounts do
   use this to resolve any queries and mutations for Accounts
   """
 
-  alias Cambiatus.{Accounts, Auth, Auth.SignUp}
+  alias Cambiatus.{
+    Accounts,
+    Auth,
+    Auth.SignUp
+  }
+
   alias Cambiatus.Accounts.{User, Transfers}
 
   @doc """
@@ -12,11 +17,6 @@ defmodule CambiatusWeb.Resolvers.Accounts do
   """
   def get_user(_, %{account: account}, _) do
     Accounts.get_account_profile(account)
-  end
-
-  def get_phrase(_, %{account: account}, _) do
-    phrase = Auth.Phrase.generate()
-    {:ok, %{phrase: phrase, token: CambiatusWeb.AuthToken.initiate(account, phrase)}}
   end
 
   def get_payers_by_account(%User{} = user, %{account: _} = payer, _) do
@@ -38,6 +38,16 @@ defmodule CambiatusWeb.Resolvers.Accounts do
     end
   end
 
+  def get_auth_session(_, %{account: account}, _) do
+    with %User{} = user <- Accounts.get_user(account),
+         {:ok, phrase} <- Auth.gen_auth_phrase(user) do
+      {:ok, phrase}
+    else
+      nil -> {:error, "Account not found"}
+      err -> err
+    end
+  end
+
   def sign_in(_, %{account: account, password: password}, _) do
     case Auth.sign_in(account, password) do
       {:error, reason} ->
@@ -48,16 +58,13 @@ defmodule CambiatusWeb.Resolvers.Accounts do
     end
   end
 
-  def sign_in(_, %{account: account, signature: signature}, %{context: context}) do
-    %{phrase: phrase, token: token} = context
+  def sign_in(_, %{signature: signature}, %{context: context}) do
+    phrase = context.phrase
 
-    case Auth.sign_in_v2(account, signature, phrase) do
-      {:error, reason} ->
-        CambiatusWeb.AuthToken.invalidate(token)
-        {:error, message: "Sign In failed", details: Cambiatus.Error.from(reason)}
-
-      {:ok, user} ->
-        {:ok, %{user: user, token: CambiatusWeb.AuthToken.sign(user)}}
+    with {:ok, {user, token}} <- Auth.verify_signature(phrase, signature) do
+      {:ok, %{user: user, token: token}}
+    else
+      {:error, _details} = error -> error
     end
   end
 
@@ -82,7 +89,18 @@ defmodule CambiatusWeb.Resolvers.Accounts do
         {:error, message: "Couldn't create user", details: Cambiatus.Error.from(reason)}
 
       {:ok, user} ->
-        {:ok, %{user: user, token: CambiatusWeb.AuthToken.sign(user)}}
+        session_token = Auth.create_session(user)
+        {:ok, %{user: user, token: session_token}}
+    end
+  end
+
+  def sign_out(_, _, %{context: context}) do
+    %{current_user: user} = context
+
+    with {1, nil} <- Auth.delete_user_token(%{account: user.account, filter: :session}) do
+      {:ok, "Logged out"}
+    else
+      _error -> {:error, "Unable to sign out"}
     end
   end
 

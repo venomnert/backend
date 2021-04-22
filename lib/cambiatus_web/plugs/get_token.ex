@@ -1,4 +1,4 @@
-defmodule CambiatusWeb.Plugs.SetPhrase do
+defmodule CambiatusWeb.Plugs.GetToken do
   @moduledoc """
   Plug used together with GraphQL to quickly add the current logged user on the resolvers data
 
@@ -12,22 +12,19 @@ defmodule CambiatusWeb.Plugs.SetPhrase do
   def init(opts), do: opts
 
   def call(conn, _) do
-    context = conn |> get_phrase() |> update_context()
+    context = build_context(conn)
     Absinthe.Plug.put_options(conn, context: context)
   end
 
-  defp get_phrase(conn) do
+  def build_context(conn) do
     conn
-    |> fetch_session()
-    |> get_session(:phrase)
+    |> get_req_header("authorization")
     |> case do
-      nil -> {conn, %{}}
-      phrase -> {conn, %{phrase: phrase}}
-    end
-  end
+      ["Bearer " <> token] ->
+        %{token: token}
 
-  defp update_context({conn, context}) do
-    context
-    |> Map.merge(conn.private[:absinthe].context)
+      [] ->
+        %{}
+    end
   end
 end
