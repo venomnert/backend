@@ -19,6 +19,7 @@ defmodule Cambiatus.ApiCase do
     quote do
       use Phoenix.ConnTest
       alias Cambiatus.Repo
+      alias Cambiatus.Auth
 
       import Ecto
       import Ecto.Changeset
@@ -27,12 +28,8 @@ defmodule Cambiatus.ApiCase do
 
       @endpoint CambiatusWeb.Endpoint
 
-      defp add_token(conn, token) do
-        put_req_header(conn, "authorization", "Bearer #{token}")
-      end
-
       defp auth_user(conn, user) do
-        token = CambiatusWeb.AuthToken.sign(user)
+        token = Auth.create_session(user)
         put_req_header(conn, "authorization", "Bearer #{token}")
       end
     end

@@ -22,13 +22,14 @@ defmodule CambiatusWeb.Schema.AccountTypes do
       resolve(&AccountsResolver.get_user/3)
     end
 
-    @desc "Sign in phrase"
-    field :get_auth_phrase, :auth_phrase do
+    @desc "Phrase utilized to generate signature"
+    field :gen_auth, :string do
       arg(:account, non_null(:string),
         description: "EOS Account, must have 12 chars long and use only [a-z] and [0-5]"
       )
 
-      resolve(&AccountsResolver.get_phrase/3)
+      resolve(&AccountsResolver.get_auth_session/3)
+      middleware(Middleware.Phrase)
     end
   end
 
@@ -74,10 +75,14 @@ defmodule CambiatusWeb.Schema.AccountTypes do
     end
 
     field :sign_in_v2, :session do
-      arg(:account, non_null(:string))
       arg(:signature, non_null(:string))
 
       resolve(&AccountsResolver.sign_in/3)
+    end
+
+    field :sign_out, :string do
+      middleware(Middleware.Authenticate)
+      resolve(&AccountsResolver.sign_out/3)
     end
 
     field :sign_in, :session do
@@ -115,11 +120,6 @@ defmodule CambiatusWeb.Schema.AccountTypes do
   input_object(:contact_input) do
     field(:type, :contact_type)
     field(:external_id, :string)
-  end
-
-  object(:auth_phrase) do
-    field(:phrase, :string)
-    field(:token, :string)
   end
 
   @desc "The direction of the transfer"

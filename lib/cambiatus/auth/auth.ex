@@ -6,12 +6,14 @@ defmodule Cambiatus.Auth do
   alias Cambiatus.{
     Accounts,
     Accounts.User,
-    Auth,
-    Auth.Invitation,
-    Auth.InvitationId,
-    Auth.Ecdsa,
     Commune.Network,
-    Repo
+    Repo,
+    Auth
+  }
+  alias Cambiatus.Auth.{
+    Invitation,
+    InvitationId,
+    Session
   }
 
   @contract Application.get_env(:cambiatus, :contract)
@@ -44,25 +46,26 @@ defmodule Cambiatus.Auth do
     |> netlink(invitation_id)
   end
 
-  def sign_in_v2(account, signature, phrase) do
-    account
-    |> Ecdsa.verify_signature(signature, phrase)
-    |> case do
-      true ->
-        account
-        |> Accounts.get_user()
-        |> case do
-          nil ->
-            {:error, :not_found}
-
-          user ->
-            {:ok, user}
-        end
-
-      false ->
-        {:error, "Invalid signature"}
-    end
+  def gen_auth_phrase(user) do
+    user
+    |> Session.create_phrase()
   end
+
+  def verify(token) do
+    token
+    |> Session.verify_session_token()
+    |> Session.get_account_from_token()
+  end
+
+  def verify_signature(phrase, signature) do
+    %{phrase: phrase, filter: :auth}
+    |> Session.get_user_token()
+    |> Session.verify_signature_helper(phrase, signature)
+  end
+
+  def create_session(user), do: Session.create_session(user)
+
+  def delete_user_token(args), do: Session.delete_user_token(args)
 
   def netlink({:ok, user}, invitation_id) do
     with {:ok, invitation} <- Auth.get_invitation(invitation_id),

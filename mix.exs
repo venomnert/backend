@@ -5,7 +5,7 @@ defmodule Cambiatus.Mixfile do
     [
       app: :cambiatus,
       version: "1.7.8",
-      elixir: "~> 1.9",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -48,7 +48,6 @@ defmodule Cambiatus.Mixfile do
       {:uuid, "~> 1.1"},
       {:magic_number, "~> 0.0.4"},
       {:mogrify, "~> 0.8.0"},
-      {:nodejs, "~> 2.0"},
       {:ex_phone_number, "~> 0.2"},
 
       # Absinthe Packages
@@ -64,8 +63,8 @@ defmodule Cambiatus.Mixfile do
       {:eosrpc, "~> 0.6.1"},
       {:sentry, "~> 6.4"},
       {:hashids, "~> 2.0"},
-      {:starkbank_ecdsa, "~> 1.0.0"},
       {:puid, "~> 1.0"},
+      {:eosjs_auth_wrapper, "~> 0.1.7"},
 
       # AWS Packages
       {:ex_aws, "~> 2.1"},
@@ -97,7 +96,6 @@ defmodule Cambiatus.Mixfile do
         "ecto.drop",
         "ecto.create --quiet",
         "ecto.migrate",
-        "cmd npm run --prefix nodejs_auth develop",
         "test"
       ]
     ]
